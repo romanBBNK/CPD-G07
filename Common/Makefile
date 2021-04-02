@@ -1,17 +1,17 @@
-SOURCES = ballQuery.c gen_points.c
+SOURCES = ballQuery.c
 SOURCES+=
 OBJS = $(SOURCES:%.c=%.o)
 CC   = gcc
 CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O3 #-I../
 LDFLAGS=-lm
-TARGET = BallQuery
+TARGET = ballQuery
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS)
 
-BallQuery.o: BallQuery.c
+ballQuery.o: ballQuery.c
 
 $(OBJS):
 	$(CC) $(CFLAGS) -c -o $@ $<

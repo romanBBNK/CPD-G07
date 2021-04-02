@@ -6,3 +6,8 @@
   89536	Roman Babynyuk
   98649	Pedro Guerra
   98722	Miguel Rodrigo da Costa Figueiredo
+  
+# Information and execution
+
+**1. Versions**
+This is the first delivery version, containing the Sequential + OpenMP implementation.

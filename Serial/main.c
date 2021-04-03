@@ -8,11 +8,10 @@ int main(int argc, char *argv[])
     double exec_time;
     exec_time = -omp_get_wtime();
     int n_dims;
-    int n_points;
-    int gen_seed;
+    long n_points;
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
-    int root = build_tree();
+    node_t* root = build_tree(pts, n_dims, n_points);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1lf\n", exec_time);

@@ -1,5 +1,5 @@
-SOURCES = main.c
-SOURCES+= ../Common/ballQuery.c ../Common/gen_points.c
+SOURCES = main.c tree.c
+SOURCES+=
 OBJS = $(SOURCES:%.c=%.o)
 CC   = gcc
 CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O3 #-I../
@@ -12,6 +12,8 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS)
 
 main.o: main.c
+
+tree.o: tree.c tree.h
 
 $(OBJS):
 	$(CC) $(CFLAGS) -c -o $@ $<

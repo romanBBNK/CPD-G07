@@ -2,7 +2,7 @@ SOURCES = main.c tree.c
 SOURCES+=
 OBJS = $(SOURCES:%.c=%.o)
 CC   = gcc
-CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O3 #-I../
+CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O0 #-I../
 LDFLAGS=-lm
 TARGET = BallAlg-Serial
 

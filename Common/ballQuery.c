@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <math.h>
 
-typedef struct _node {
+/*typedef struct _node {
     double radius;
     long id;
     long L;
     long R;
-} node_t;
+} node_t;*/
 
 typedef struct _hash {
     long id;
@@ -115,7 +115,7 @@ void search_tree(long idx)
         search_tree(idxr);
 }
 
-int main(int argc, char *argv[])
+/*int main(int argc, char *argv[])
 {
     FILE *fp;
     node_t *node;
@@ -176,3 +176,4 @@ int main(int argc, char *argv[])
         printf("%lf ", center[currBest][d]);
     printf("\n");
 }
+*/

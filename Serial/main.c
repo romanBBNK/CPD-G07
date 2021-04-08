@@ -11,11 +11,14 @@ int main(int argc, char *argv[])
     long n_points;
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
-    node_t* root = build_tree(pts, n_dims, n_points);
+    //printf("N_Dims: %d ", n_dims);
+    //printf("N_Points: %d\n", n_points);
+    node_t* root;
+    root = build_tree(pts, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
     fprintf(stderr, "%.1lf\n", exec_time);
-    dump_tree(root);
+    dump_tree(root, n_dims);
     return 0;
 }
 

@@ -32,6 +32,7 @@ void allocate_hash()
     hash = (hash_t **) calloc(n_nodes, sizeof(hash_t *));
     if(hash == NULL){
         printf("Error allocating hash, exiting.\n");
+        printf("Error allocating hash, exiting.\n");
         exit(20);
     }
 }

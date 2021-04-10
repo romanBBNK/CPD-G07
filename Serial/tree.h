@@ -11,6 +11,11 @@ typedef struct _node {
     struct _node* AddR;
 } node_t;
 
+typedef struct _projection {
+    double** projection;
+    double** point;
+};
+
 node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node);
 
 node_t* addNewNode(double radius, long id, long L, long R);

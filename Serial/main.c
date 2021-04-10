@@ -5,7 +5,7 @@
 
 void dump_tree(struct _node* node, int n_dimensions){
 
-    printf("%ld %ld %ld %ld ", node->id, node->L, node->R, node->radius);
+    printf("%ld %ld %ld %f ", node->id, node->L, node->R, node->radius);
     for (int i = 0; i != n_dimensions; i++){
         printf("%f ", node->coordinates[i]);
     }
@@ -28,18 +28,6 @@ int main(int argc, char *argv[])
     long n_points;
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
-
-    /*pts[0][0] = 3.4;
-    pts[0][1] = 7.7;
-    pts[1][0] = 7.8;
-    pts[1][1] = 8.0;
-    pts[2][0] = 2.8;
-    pts[2][1] = 5.5;
-    pts[3][0] = 9.1;
-    pts[3][1] = 2.0;
-    pts[4][0] = 8.4;
-    pts[4][1] = 3.9;*/
-
 
     //printf("N_Dims: %d ", n_dims);
     //printf("N_Points: %d\n", n_points);

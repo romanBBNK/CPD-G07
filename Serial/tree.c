@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 int n_dimensions;
+int id = 0;
 
 double distance(double *pt1, double *pt2)
 {
@@ -106,24 +107,6 @@ double* orthogonal_projection(double* a, double* b, double* p){
 
 }
 
-
-/*void dump_tree(struct _node* node, int n_dimensions){
-
-    printf("%ld %ld %ld %ld ", node->id, node->L, node->R, node->radius);
-    for (int i = 0; i != n_dimensions; i++){
-        printf("%f ", node->coordinates[i]);
-    }
-    printf("\n");
-
-    if (node->L != -1){
-        dump_tree(node->AddL, n_dimensions);
-    }
-    if (node->R != -1){
-        dump_tree(node->AddR, n_dimensions);
-    }
-
-}*/
-
 node_t* addNewNode(double radius, long id, long L, long R){
     node_t* newNode = (node_t*) malloc(sizeof(node_t));
 
@@ -136,6 +119,8 @@ node_t* addNewNode(double radius, long id, long L, long R){
 
     return newNode;
 }
+
+#define new_max(x,y) (((x) >= (y)) ? (x) : (y))
 
 double* vector_avg(double* p1, double* p2){
 
@@ -166,14 +151,16 @@ double* get_furthest_nodes(double **pts, int n_points){
             }
         }
     }
-    return furthest_nodes;
+    return (double *) (double *) furthest_nodes;
 
 }
 
-double** get_projections(int *furthest_nodes, double** pts, int n_points){
+struct _projection get_projections(int *furthest_nodes, double** pts, int n_points){
 
     int n_projections = 0;
-    double** projections = create_array_pts1(n_dimensions, n_points - 2);
+    struct _projection projections;
+    projections.projection = malloc(sizeof(double) * n_dimensions);
+    projections.point = malloc(sizeof(double) * n_dimensions);
 
     int furthest_node_1 = furthest_nodes[0];
     int furthest_node_2 = furthest_nodes[1];
@@ -181,12 +168,15 @@ double** get_projections(int *furthest_nodes, double** pts, int n_points){
     for(int i = 0; i < n_points; i++) {
         if (i != furthest_node_1 && i != furthest_node_2){
 
-            projections[n_projections] = orthogonal_projection(pts[furthest_node_1], pts[furthest_node_2], pts[i]);
+            projections.projection[n_projections] = orthogonal_projection(pts[furthest_node_1], pts[furthest_node_2], pts[i]);
+            printf("\n\nProjections na struct: %f %f\n ", projections.projection[n_projections][0], projections.projection[n_projections][1]);
+            projections.point[n_projections] = pts[i];
+            printf("\n\nPoints na struct: %f %f\n\n\n ", projections.point[n_projections][0], projections.point[n_projections][1]);
             n_projections++;
         }
     }
 
-    //printf("\n\nValues: %d %d %d\n\n ", furthest_node_1, furthest_node_2, n_points);
+    printf("\n\nValues: %d %d %d\n\n ", furthest_node_1, furthest_node_2, n_points);
     //printf("\n\n");
 
     return projections;
@@ -219,7 +209,7 @@ double** sort(double** array1, int n_points){
 
 }
 
-void left_and_right_partitions(double **sorted_points, int n_points, double *center_node, node_t* node) {
+void left_and_right_partitions(double **sorted_points, int n_points, double *center_node, double* right_partition_point, node_t* node) {
 
     //Não sei o tamanho destes vetores logo de início, portanto meti como n_points
     double **left_partition = create_array_pts1(n_dimensions, n_points);
@@ -228,14 +218,30 @@ void left_and_right_partitions(double **sorted_points, int n_points, double *cen
     int n_left_partition = 0;
     int n_right_partition = 0;
 
-    for (int i = 0; i != n_points; i++) {
-        if (sorted_points[i][0] < center_node[0]) {
-            left_partition[n_left_partition] = sorted_points[i];
-            n_left_partition++;
-        } else {
-            right_partition[n_right_partition] = sorted_points[i];
-            n_right_partition++;
+    if (right_partition_point == NULL){
+        for (int i = 0; i != n_points; i++) {
+            if (sorted_points[i][0] < center_node[0]) {
+                left_partition[n_left_partition] = sorted_points[i];
+                n_left_partition++;
+            } else {
+                right_partition[n_right_partition] = sorted_points[i];
+                n_right_partition++;
+            }
         }
+    }
+    else {
+        for (int i = 0; i != n_points; i++) {
+            if (sorted_points[i][0] < center_node[0] && sorted_points[i][0] != right_partition_point[0]) {
+                left_partition[n_left_partition] = sorted_points[i];
+                n_left_partition++;
+            }
+            else if (sorted_points[i][0] > center_node[0] && sorted_points[i][0] != right_partition_point[0]) {
+                right_partition[n_right_partition] = sorted_points[i];
+                n_right_partition++;
+            }
+        }
+        right_partition[n_right_partition] = right_partition_point;
+        n_right_partition++;
     }
 
     for (int i = 0; i != n_left_partition; i++) {
@@ -248,22 +254,27 @@ void left_and_right_partitions(double **sorted_points, int n_points, double *cen
     }
 
     if (n_left_partition > 0 && n_right_partition == 0){
+        node->R = -1;
         printf("\n\n\n ---------LeftPartition---------\n");
         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+        node->L = (node->AddL)->id;
         return;
     }
 
     else if (n_left_partition == 0 && n_right_partition > 0){
+        node->L = -1;
         printf("\n\n\n ---------RightPartition---------\n");
         node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+        node->R = (node->AddR)->id;
         return;
     }
     else {
-        printf("\n\n\n ---------RightPartition---------\n");
-        node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
         printf("\n\n\n ---------LeftPartition---------\n");
         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
-
+        node->L = (node->AddL)->id;
+        printf("\n\n\n ---------RightPartition---------\n");
+        node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+        node->R = (node->AddR)->id;
     }
 }
 
@@ -304,23 +315,14 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
 
-        //Sort points according to their Xs
-        double** sorted_points = create_array_pts1(n_dimensions, n_points);
-        sorted_points = sort(pts, n_points);
-
-        for (int i = 0; i != n_points; i++){
-            printf("Sorted points: %f %f\n", sorted_points[i][0], sorted_points[i][1]);
-        }
-        printf("\n\n");
-
         //Get the projections of the rest of the points
-        double** projections = create_array_pts1(n_dimensions, n_points - 2);
+        struct _projection projections;
         projections = get_projections(furthest_nodes, pts, n_points);
         int n_projections = n_points - 2; //This is because the two furthest points are the only ones without a projection
 
         //Sort projections according to their Xs
         double** sorted_projections = create_array_pts1(n_dimensions, n_points - 2);
-        sorted_projections = sort(projections, n_points - 2);
+        sorted_projections = sort(projections.projection, n_points - 2);
 
         for (int i = 0; i != n_points - 2; i++){
             printf("Projetions: %f %f \n", sorted_projections[i][0], sorted_projections[i][1]);
@@ -330,29 +332,52 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //Get center node
         double* center_node = malloc(sizeof(double) * n_dimensions);
         if (n_projections == 1){
-            center_node = sorted_projections[0];  //The center node is going to only projection
+            center_node = sorted_projections[0];  //The center node is going to be the only projection
         }
         else{
             center_node = get_center_node(sorted_projections, n_projections);
+        }
+
+        double* point_with_center_projection = malloc(sizeof(double) * n_dims);
+
+        for (int i = 0; i != n_projections; i++){
+
+            if (projections.projection[i] == center_node){
+                printf("POINT PARA RIGHT PARTITION: %f %f\n\n", projections.point[i][0], projections.point[i][1]);
+                point_with_center_projection = projections.point[i];
+            }
+
         }
 
         printf("Center node: %f %f\n", center_node[0], center_node[1]);
 
         //Give the node the respective values
         node = addNewNode(1, 0, 1, 2);
+        node->id = id;
+        id++;
+        node->radius = new_max(distance(pts[furthest_nodes[0]], center_node), distance(pts[furthest_nodes[1]], center_node));
         node->coordinates = malloc(sizeof(double) * n_dims);
         for (int i = 0; i != n_dims; i++){
             node->coordinates[i] = center_node[i];
         }
 
+        //Sort points according to their Xs
+        double** sorted_points = create_array_pts1(n_dimensions, n_points);
+        sorted_points = sort(pts, n_points);
+
+        for (int i = 0; i != n_points; i++){
+            printf("Sorted points: %f %f\n", sorted_points[i][0], sorted_points[i][1]);
+        }
+        printf("\n\n");
+
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(sorted_points, n_points, center_node, node);
+        left_and_right_partitions(sorted_points, n_points, center_node, point_with_center_projection, node);
 
         return node;
 
     }
 
-    //If there is only two points no projections are necessary, we only need to find the average of these two nodes to get the center node
+        //If there is only two points no projections are necessary, we only need to find the average of these two nodes to get the center node
     else if (n_points == 2){
 
         for (int i = 0; i != n_points; i++){
@@ -365,28 +390,36 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         printf("Center node: %f %f\n", center_node[0], center_node[1]);
 
-        node = addNewNode(6, 0, 1, 2);
+        node = addNewNode(0, 0, 1, 2);
+        node->id = id;
+        id++;
+        node->radius = distance(pts[furthest_nodes[0]], center_node);
         node->coordinates = malloc(sizeof(double) * n_dims);
         for (int i = 0; i != n_dims; i++){
             node->coordinates[i] = center_node[i];
         }
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(pts, n_points, center_node, node);
+        left_and_right_partitions(pts, n_points, center_node, NULL, node);
 
         return node;
     }
 
-    //if there is only one point we just need to give the values to this node and stop the recursivity
+        //if there is only one point we just need to give the values to this node and stop the recursivity
     else if (n_points == 1){
 
         printf("Only one: %f %f\n", pts[0][0], pts[0][1]);
 
-        node = addNewNode(6, 0, -1, -1);
+        node = addNewNode(0, 0, -1, -1);
+        node->id = id;
+        id++;
         node->coordinates = malloc(sizeof(double) * n_dims);
         for (int i = 0; i != n_dims; i++){
             node->coordinates[i] = pts[0][i];
         }
+        node->L = -1;
+        node->R = -1;
+        node->radius = 0;
 
         return node;
     }

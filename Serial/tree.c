@@ -344,8 +344,9 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
                 if (projections.projection[i] == center_node){
                     //printf("POINT PARA RIGHT PARTITION: %f %f\n\n", projections.point[i][0], projections.point[i][1]);
-                    point_with_center_projection[0] = projections.point[i][0];
-                    point_with_center_projection[1] = projections.point[i][1];
+                    for (int j = 0; j != n_dims; j++){
+                        point_with_center_projection[j] = projections.point[i][j];
+                    }
                 }
             }
 

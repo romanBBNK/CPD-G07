@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
     root = build_tree(pts, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
-    fprintf(stderr, "%.1lf\n", exec_time);
     dump_tree(root, n_dims);
+    fprintf(stderr, "%.1lf\n", exec_time);
     return 0;
 }
 

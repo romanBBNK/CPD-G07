@@ -1,3 +1,6 @@
 /.idea/
 /cmake-build-debug/
 CMakeLists.txt
+Serial/BallAlg-Serial
+Serial/main.o
+*.o

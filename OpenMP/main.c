@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "../Common/gen_points.c"
 #include "tree.h"
+#include <omp.h>
 
 
 void dump_tree(struct _node* node, int n_dimensions){
@@ -23,6 +24,7 @@ void dump_tree(struct _node* node, int n_dimensions){
 
 int main(int argc, char *argv[])
 {
+    omp_set_num_threads(1);
     double exec_time;
     exec_time = -omp_get_wtime();
     int n_dims;

@@ -1,6 +1,7 @@
 #include "tree.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <omp.h>
 
 
 int n_dimensions;
@@ -265,7 +266,10 @@ void left_and_right_partitions(double **sorted_points, int n_points, double *cen
         return;
     }
     else {
-        for (int i = 0; i < 2; i++) {
+        int i;
+
+#pragma omp parallel for private(i)
+            for (i = 0; i < 2; i++) {
                 if (i == 0) {
                     //printf("\n\n\n ---------LeftPartition---------\n");
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);

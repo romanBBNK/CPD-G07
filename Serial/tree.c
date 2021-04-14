@@ -36,16 +36,6 @@ double **create_array_pts1(int n_dims, long np)
     return p_arr;
 }
 
-int compareTo(const void *first, const void *second){
-
-    const double (*a)[0] = first;
-    const double (*b)[0] = second;
-    if ( (*a)[0] < (*b)[0] ) return -1;
-    if ( (*a)[0] > (*b)[0] ) return +1;
-    return 0;
-
-}
-
 double inner_product(double* pt1, double* pt2){
 
     double sum = 0.0;
@@ -139,20 +129,27 @@ double* get_furthest_nodes(double **pts, int n_points){
 
     double dist = 0;
     double dist_temp;
+    double* initial_point = pts[0];
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
-    for(int i = 0; i < n_points; i++) {
-        for (int j = 0; j < n_points; j++) {
-            if (i != j && j > i){
-                dist_temp = distance(pts[i], pts[j]);
-                if (dist_temp > dist){
-                    dist = dist_temp;
-                    furthest_nodes[0] = i;
-                    furthest_nodes[1] = j;
-                }
-            }
+    for (int i = 0; i != n_points; i++){
+        dist_temp = distance(initial_point, pts[i]);
+        if (dist_temp > dist) {
+            dist = dist_temp;
+            furthest_nodes[0] = i;
         }
     }
+
+    dist = 0;
+
+    for (int i = 0; i != n_points; i++){
+        dist_temp = distance(furthest_nodes[0], pts[i]);
+        if (dist_temp > dist) {
+            dist = dist_temp;
+            furthest_nodes[1] = i;
+        }
+    }
+
     return furthest_nodes;
 
 }
@@ -269,9 +266,17 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
     int i;
     int j;
 
+    printf("Aqui\n");
+    double exec_time1;
+    exec_time1 = -omp_get_wtime();
+
     //Obtain furthest nodes within the given points
-    int *furthest_nodes = malloc (sizeof(int) * 2);
+    int *furthest_nodes;
     furthest_nodes = get_furthest_nodes(pts, n_points);
+
+    exec_time1 += omp_get_wtime();
+    fprintf(stderr, "%.1lf\n", exec_time1);
+    printf("Acola\n");
 
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){

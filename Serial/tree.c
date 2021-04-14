@@ -132,6 +132,8 @@ double* get_furthest_nodes(double **pts, int n_points){
     double* a;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
+    printf("1\n");
+
     for (int i = 0; i != n_points; i++){
         dist_temp = distance(initial_point, pts[i]);
         if (dist_temp > dist) {
@@ -142,6 +144,8 @@ double* get_furthest_nodes(double **pts, int n_points){
     }
 
     dist = 0;
+
+    printf("2\n");
 
     for (int i = 0; i != n_points; i++){
         dist_temp = distance(a, pts[i]);
@@ -264,23 +268,12 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
     n_dimensions = n_dims;
 
-    int i;
-    int j;
-
-    printf("Aqui\n");
-    double exec_time1;
-    exec_time1 = -omp_get_wtime();
-
-    //Obtain furthest nodes within the given points
-    int *furthest_nodes;
-    furthest_nodes = get_furthest_nodes(pts, n_points);
-
-    exec_time1 += omp_get_wtime();
-    fprintf(stderr, "%.1lf\n", exec_time1);
-    printf("Acola\n");
-
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
+
+        //Obtain furthest nodes within the given points
+        int *furthest_nodes;
+        furthest_nodes = get_furthest_nodes(pts, n_points);
 
         //Get the projections of the rest of the points
         struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
@@ -331,6 +324,10 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //If there is only two points no projections are necessary, we only need to find the average of these two nodes to get the center node
     else if (n_points == 2){
+
+        //Obtain furthest nodes within the given points
+        int *furthest_nodes;
+        furthest_nodes = get_furthest_nodes(pts, n_points);
 
         double* center_node = malloc (sizeof(double) * n_dims);
         center_node = vector_avg(pts[furthest_nodes[0]], pts[furthest_nodes[1]]);

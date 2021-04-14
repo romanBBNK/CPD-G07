@@ -129,6 +129,7 @@ double* get_furthest_nodes(double **pts, int n_points){
     double dist = 0;
     double dist_temp;
     double* initial_point = pts[0];
+    double* a;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
     for (int i = 0; i != n_points; i++){
@@ -136,13 +137,14 @@ double* get_furthest_nodes(double **pts, int n_points){
         if (dist_temp > dist) {
             dist = dist_temp;
             furthest_nodes[0] = i;
+            a = pts[i];
         }
     }
 
     dist = 0;
 
     for (int i = 0; i != n_points; i++){
-        dist_temp = distance(furthest_nodes[0], pts[i]);
+        dist_temp = distance(a, pts[i]);
         if (dist_temp > dist) {
             dist = dist_temp;
             furthest_nodes[1] = i;

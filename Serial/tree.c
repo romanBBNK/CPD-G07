@@ -108,7 +108,6 @@ node_t* addNewNode(double radius, long id, long L, long R){
     newNode->R;
     newNode->AddL = NULL;
     newNode->AddR = NULL;
-
     return newNode;
 }
 

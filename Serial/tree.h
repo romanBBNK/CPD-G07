@@ -12,8 +12,8 @@ typedef struct _node {
 } node_t;
 
 typedef struct _projection {
-    double** projection;
-    double** point;
+    double* projection;
+    double* point;
 };
 
 node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node);

@@ -1,7 +1,6 @@
 #include "tree.h"
 #include <stdio.h>
 #include <unistd.h>
-#include <omp.h>
 
 
 int n_dimensions;
@@ -34,16 +33,6 @@ double **create_array_pts1(int n_dims, long np)
         p_arr[i] = &_p_arr[i * n_dims];
 
     return p_arr;
-}
-
-int compareTo(const void *first, const void *second){
-
-    const double (*a)[0] = first;
-    const double (*b)[0] = second;
-    if ( (*a)[0] < (*b)[0] ) return -1;
-    if ( (*a)[0] > (*b)[0] ) return +1;
-    return 0;
-
 }
 
 double inner_product(double* pt1, double* pt2){
@@ -94,16 +83,21 @@ double* multiply_by_scalar(double* pt1, double scalar){
 
 }
 
-double* orthogonal_projection(double* a, double* b, double* p){
+double* orthogonal_projection(double* a, double* b, double* p, double* b_minus_a, double inner_product_a_minus_b){
 
-    double* pt3 = malloc(n_dimensions * sizeof(double));
+    double* pt3;
 
     double* p_minus_a = subtraction(p, a);
-    double* b_minus_a = subtraction(b, a);
 
-    double first_term = inner_product(p_minus_a, b_minus_a) / inner_product(b_minus_a, b_minus_a);
+    double first_term = inner_product(p_minus_a, b_minus_a) / inner_product_a_minus_b;
 
     pt3 = addition(multiply_by_scalar(b_minus_a, first_term), a);
+
+    if (pt3[0] < a[0] && pt3[0] < b[0]){
+    }
+
+    if (pt3[0] > a[0] && pt3[0] > b[0]){
+    }
 
     return pt3;
 
@@ -118,7 +112,6 @@ node_t* addNewNode(double radius, long id, long L, long R){
     newNode->R;
     newNode->AddL = NULL;
     newNode->AddR = NULL;
-
     return newNode;
 }
 
@@ -139,74 +132,51 @@ double* get_furthest_nodes(double **pts, int n_points){
 
     double dist = 0;
     double dist_temp;
+    double* initial_point = pts[0];
+    double* a;
+    int i;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
-    for(int i = 0; i < n_points; i++) {
-        for (int j = 0; j < n_points; j++) {
-            if (i != j){
-                dist_temp = distance(pts[i], pts[j]);
-                if (dist_temp > dist){
+//#pragma parallel for private(i, dist_temp)
+    for (int i = 0; i != n_points; i++){
+        dist_temp = distance(initial_point, pts[i]);
+        if (dist_temp > dist) {
+//#pragma critical
+            //   {
+                if (dist_temp > dist) {
                     dist = dist_temp;
                     furthest_nodes[0] = i;
-                    furthest_nodes[1] = j;
+                    a = pts[i];
                 }
-            }
-        }
-    }
-    return (double *) (double *) furthest_nodes;
-
-}
-
-struct _projection get_projections(int *furthest_nodes, double** pts, int n_points){
-
-    int n_projections = 0;
-    struct _projection projections;
-    projections.projection = create_array_pts1(n_dimensions, n_points - 2);
-    projections.point = create_array_pts1(n_dimensions, n_points - 2);
-
-    int furthest_node_1 = furthest_nodes[0];
-    int furthest_node_2 = furthest_nodes[1];
-
-    for(int i = 0; i < n_points; i++) {
-        if (i != furthest_node_1 && i != furthest_node_2){
-
-            projections.projection[n_projections] = orthogonal_projection(pts[furthest_node_1], pts[furthest_node_2], pts[i]);
-            projections.point[n_projections] = pts[i];
-            n_projections++;
+            //}
         }
     }
 
-    return projections;
+    dist = 0;
 
-}
-
-double** sort(double** array1, int n_points){
-
-    double *array_x = malloc (n_points * sizeof(double));
-
-    for(int i = 0; i != n_points; i++){
-
-        array_x[i] = array1[i][0];
-
-    }
-
-    qsort(array_x, n_points, sizeof(double), compareTo);
-    double** sorted_array = create_array_pts1(n_dimensions, n_points);
-
-    //FAZER QSORT DA LISTA PROJECTIONS EM VEZ DE ESTAR A FAZER ESTA TROCA
-    for (int i = 0; i != n_points; i++){
-        for (int j = 0; j != n_points; j++){
-            if (array_x[i] == array1[j][0]){
-                sorted_array[i] = array1[j];
-            }
+    for (i = 0; i != n_points; i++){
+        dist_temp = distance(a, pts[i]);
+        if (dist_temp > dist) {
+            dist = dist_temp;
+            furthest_nodes[1] = i;
         }
     }
 
-    return sorted_array;
+    return furthest_nodes;
 
 }
 
-void left_and_right_partitions(double **sorted_points, int n_points, double *center_node, double* right_partition_point, node_t* node) {
+int compareTo(const void *first, const void *second){
+
+    const double (*a)[0] = first;
+    const double (*b)[0] = second;
+    if ( (*a)[0] < (*b)[0] ) return -1;
+    if ( (*a)[0] > (*b)[0] ) return +1;
+    return 0;
+
+}
+
+void left_and_right_partitions(struct _projection* projections, int n_points, double center_x, node_t* node) {
 
     //Não sei o tamanho destes vetores logo de início, portanto meti como n_points
     double **left_partition = create_array_pts1(n_dimensions, n_points);
@@ -215,44 +185,34 @@ void left_and_right_partitions(double **sorted_points, int n_points, double *cen
     int n_left_partition = 0;
     int n_right_partition = 0;
 
-    if (right_partition_point == NULL){
-        for (int i = 0; i != n_points; i++) {
-            if (sorted_points[i][0] < center_node[0]) {
-                left_partition[n_left_partition] = sorted_points[i];
-                n_left_partition++;
-            } else {
-                right_partition[n_right_partition] = sorted_points[i];
-                n_right_partition++;
-            }
+    /*printf("Projections \n");
+    for(int i = 0; i != n_points; i++){
+            printf("%f ", projections[i].projection[0]);
+
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("Points \n");
+    for(int i = 0; i != n_points; i++){
+            printf("%f ", projections[i].point[0]);
+        printf("\n");
+    }
+    printf("\n");
+*/
+    for (int i = 0; i != n_points; i++) {
+        //printf("Projections[i]: %f", projections[i]);
+        if (projections[i].projection[0] < center_x) {
+            left_partition[n_left_partition] = projections[i].point;
+            n_left_partition++;
+        } else {
+            right_partition[n_right_partition] = projections[i].point;
+            n_right_partition++;
         }
     }
-    else {
-        for (int i = 0; i != n_points; i++) {
-            if (sorted_points[i][0] < center_node[0] && sorted_points[i][0] != right_partition_point[0]) {
-                left_partition[n_left_partition] = sorted_points[i];
-                n_left_partition++;
-            }
-            else if (sorted_points[i][0] > center_node[0] && sorted_points[i][0] != right_partition_point[0]) {
-                right_partition[n_right_partition] = sorted_points[i];
-                n_right_partition++;
-            }
-        }
-        right_partition[n_right_partition] = right_partition_point;
-        n_right_partition++;
-    }
-
-    /*for (int i = 0; i != n_left_partition; i++) {
-        printf("Left partition: %f %f\n", left_partition[i][0], left_partition[i][1]);
-    }
-    printf("\n\n");
-
-    for (int i = 0; i != n_right_partition; i++) {
-        printf("Right partition: %f %f\n", right_partition[i][0], right_partition[i][1]);
-    }*/
 
     if (n_left_partition > 0 && n_right_partition == 0){
         node->R = -1;
-        //printf("\n\n\n ---------LeftPartition---------\n");
         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
         node->L = (node->AddL)->id;
         return;
@@ -260,41 +220,59 @@ void left_and_right_partitions(double **sorted_points, int n_points, double *cen
 
     else if (n_left_partition == 0 && n_right_partition > 0){
         node->L = -1;
-        //printf("\n\n\n ---------RightPartition---------\n");
         node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
         node->R = (node->AddR)->id;
         return;
     }
     else {
         int i;
-
+        if (id == 1) {
 #pragma omp parallel for private(i)
+                for (i = 0; i < 2; i++) {
+                    if (i == 0) {
+                        node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+                        node->L = (node->AddL)->id;
+                    } else {
+                        node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+                        node->R = (node->AddR)->id;
+                    }
+                }
+        } else {
             for (i = 0; i < 2; i++) {
                 if (i == 0) {
-                    //printf("\n\n\n ---------LeftPartition---------\n");
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                     node->L = (node->AddL)->id;
                 } else {
-                    //printf("\n\n\n ---------RightPartition---------\n");
                     node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                     node->R = (node->AddR)->id;
                 }
             }
+        }
     }
 }
 
-double* get_center_node(double** sorted_projections, int n_projections){
+struct _projection get_center_projection_even_numb(struct _projection* projections, int n_projections, double* projections_x){
 
-    double* center_node = malloc (sizeof(double) * n_dimensions);
+    struct _projection center_node;
 
-    if (n_projections % 2 == 0){
-        center_node = vector_avg(sorted_projections[(n_projections / 2) - 1], sorted_projections[(n_projections / 2)]);
+    double center_x_1 = projections_x[(n_projections / 2) - 1];
+    double center_x_2 = projections_x[n_projections / 2];
+
+    double* center;
+    double* center_1;
+    double* center_2;
+
+    for (int i = 0; i != n_projections; i++){
+        if (projections[i].projection[0] == center_x_1){
+            center_1 = projections[i].projection;
+        }
+        if (projections[i].projection[0] == center_x_2){
+            center_2 = projections[i].projection;
+        }
     }
 
-    else {
-        int center_node_ID = round(n_projections / 2);
-        center_node = sorted_projections[center_node_ID];
-    }
+    center = vector_avg(center_1, center_2);
+    center_node.projection = center;
 
     return center_node;
 
@@ -304,87 +282,75 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
     n_dimensions = n_dims;
 
-    //printf("N_Dims: %d \n", n_dims);
-    //printf("N_Points: %d\n", n_points);
-
-    int i;
-    int j;
-
-    //Obtain furthest nodes within the given points
-    int *furthest_nodes = malloc (sizeof(int) * 2);
-    furthest_nodes = get_furthest_nodes(pts, n_points);
-
-    //printf("Furthest nodes: %d %d\n", furthest_nodes[0], furthest_nodes[1]);
-
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
 
+
+        //Obtain furthest nodes within the given points
+        int *furthest_nodes;
+        furthest_nodes = get_furthest_nodes(pts, n_points);
+
         //Get the projections of the rest of the points
-        struct _projection projections;
-        projections.projection = create_array_pts1(n_dimensions, n_points - 2);
-        projections.point = create_array_pts1(n_dimensions, n_points - 2);
+        struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
 
-        projections = get_projections(furthest_nodes, pts, n_points);
-        int n_projections = n_points - 2; //This is because the two furthest points are the only ones without a projection
+        //Get Projections
+        int n_projections = 0;
+        double* projections_x = malloc(sizeof(double) * n_points);
 
-        /*for (int i = 0; i != n_points - 2; i++){
-            printf("Projetions: %f %f \n", projections.projection[i][0], projections.projection[i][1]);
+        double* a = pts[furthest_nodes[1]];
+        double* b = pts[furthest_nodes[0]];
+
+        double* b_minus_a = subtraction(b, a);
+        double inner_product_a_minus_b = inner_product(b_minus_a, b_minus_a);
+        double* orthogonal_proj;
+
+        for(int i = 0; i < n_points; i++) {
+            if (i != furthest_nodes[0] && i != furthest_nodes[1]){
+
+                orthogonal_proj = orthogonal_projection(pts[furthest_nodes[0]], pts[furthest_nodes[1]], pts[i], b_minus_a, inner_product_a_minus_b);
+                projections_x[n_projections] = orthogonal_proj[0];
+                projections[n_projections].projection = orthogonal_proj;
+                projections[n_projections].point = pts[i];
+                n_projections++;
+            }
         }
-        printf("\n\n");*/
+        projections[n_projections].projection = pts[furthest_nodes[0]];
+        projections[n_projections].point = pts[furthest_nodes[0]];
+        projections[n_projections + 1].projection = pts[furthest_nodes[1]];
+        projections[n_projections + 1].point = pts[furthest_nodes[1]];
+        projections_x[n_projections] = pts[furthest_nodes[0]][0];
+        projections_x[n_projections + 1] = pts[furthest_nodes[1]][0];
+        n_projections = n_points;
 
-        //Sort projections according to their Xs
-        double** sorted_projections = create_array_pts1(n_dimensions, n_points - 2);
-        sorted_projections = sort(projections.projection, n_points - 2);
+        qsort(projections_x, n_points, sizeof(double), compareTo);
 
+        double center_x;
+        struct _projection center_projection;
 
-
-        //Get center node
-        double* center_node = malloc(sizeof(double) * n_dimensions);
-        if (n_projections == 1){
-            center_node = sorted_projections[0];  //The center node is going to be the only projection
+        if (n_projections % 2 == 0){
+            double center_x_1 = projections_x[(n_points / 2) - 1];
+            double center_x_2 = projections_x[(n_points / 2)];
+            center_x = (center_x_1 + center_x_2) / 2;
+            center_projection = get_center_projection_even_numb(projections, n_points, projections_x);
         }
         else{
-            center_node = get_center_node(sorted_projections, n_projections);
-        }
-
-        double* point_with_center_projection = malloc(sizeof(double) * n_dims);
-
-        if (n_projections % 2 != 0){
+            center_x = projections_x[n_projections / 2];
             for (int i = 0; i != n_projections; i++){
-
-                if (projections.projection[i] == center_node){
-                    //printf("POINT PARA RIGHT PARTITION: %f %f\n\n", projections.point[i][0], projections.point[i][1]);
-                    for (int j = 0; j != n_dims; j++){
-                        point_with_center_projection[j] = projections.point[i][j];
-                    }
+                if (projections[i].projection[0] == center_x){
+                    center_projection = projections[i];
                 }
             }
-
-        } else{
-            point_with_center_projection = NULL;
         }
 
         //Give the node the respective values
-        node = addNewNode(1, 0, 1, 2);
+        node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->radius = new_max(distance(pts[furthest_nodes[0]], center_node), distance(pts[furthest_nodes[1]], center_node));
-        node->coordinates = malloc(sizeof(double) * n_dims);
-        for (int i = 0; i != n_dims; i++){
-            node->coordinates[i] = center_node[i];
-        }
-
-        //Sort points according to their Xs
-        double** sorted_points = create_array_pts1(n_dimensions, n_points);
-        sorted_points = sort(pts, n_points);
-
-        /*for (int i = 0; i != n_points; i++){
-            printf("Sorted points: %f %f\n", sorted_points[i][0], sorted_points[i][1]);
-        }
-        printf("\n\n");*/
+        node->radius = new_max(distance(pts[furthest_nodes[0]], center_projection.projection), distance(pts[furthest_nodes[1]], center_projection.projection));
+        node->coordinates = center_projection.projection;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(sorted_points, n_points, center_node, point_with_center_projection, node);
+        left_and_right_partitions(projections, n_points, center_x, node);
 
         return node;
 
@@ -393,27 +359,24 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //If there is only two points no projections are necessary, we only need to find the average of these two nodes to get the center node
     else if (n_points == 2){
 
-        /*for (int i = 0; i != n_points; i++){
-            printf("Points: %f %f\n", pts[i][0], pts[i][1]);
-        }
-        printf("\n\n");*/
+        double* center_node;
+        center_node = vector_avg(pts[0], pts[1]);
+        double center_x = center_node[0];
 
-        double* center_node = malloc (sizeof(double) * n_dims);
-        center_node = vector_avg(pts[furthest_nodes[0]], pts[furthest_nodes[1]]);
+        struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
+        projections[0].projection = pts[0];
+        projections[0].point = pts[0];
+        projections[1].projection = pts[1];
+        projections[1].point = pts[1];
 
-        //printf("Center node: %f %f\n", center_node[0], center_node[1]);
-
-        node = addNewNode(0, 0, 1, 2);
+        node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->radius = distance(pts[furthest_nodes[0]], center_node);
-        node->coordinates = malloc(sizeof(double) * n_dims);
-        for (int i = 0; i != n_dims; i++){
-            node->coordinates[i] = center_node[i];
-        }
+        node->radius = distance(pts[0], center_node);
+        node->coordinates = center_node;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(pts, n_points, center_node, NULL, node);
+        left_and_right_partitions(projections, n_points, center_x, node);
 
         return node;
     }
@@ -423,19 +386,15 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //printf("Only one: %f %f\n", pts[0][0], pts[0][1]);
 
-        node = addNewNode(0, 0, -1, -1);
+        node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->coordinates = malloc(sizeof(double) * n_dims);
-        for (int i = 0; i != n_dims; i++){
-            node->coordinates[i] = pts[0][i];
-        }
+        node->coordinates = pts[0];
         node->L = -1;
         node->R = -1;
         node->radius = 0;
 
         return node;
     }
-
     return 0;
 }

@@ -3,9 +3,10 @@
 #include "../Common/gen_points.c"
 #include "tree.h"
 #include <omp.h>
-
+#define NUMITER 30
 
 void dump_tree(struct _node* node, int n_dimensions){
+
 
     printf("%ld %ld %ld %f ", node->id, node->L, node->R, node->radius);
     for (int i = 0; i != n_dimensions; i++){
@@ -24,7 +25,10 @@ void dump_tree(struct _node* node, int n_dimensions){
 
 int main(int argc, char *argv[])
 {
-    omp_set_num_threads(1);
+
+    omp_set_dynamic(0);
+    omp_set_num_threads(2);
+
     double exec_time;
     exec_time = -omp_get_wtime();
     int n_dims;
@@ -39,6 +43,7 @@ int main(int argc, char *argv[])
 
     exec_time += omp_get_wtime();
     dump_tree(root, n_dims);
+    printf("Acabei\n");
     fprintf(stderr, "%.1lf\n", exec_time);
     return 0;
 }

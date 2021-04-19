@@ -1,7 +1,6 @@
 #include "tree.h"
 #include <stdio.h>
 #include <unistd.h>
-#include <omp.h>
 
 
 int n_dimensions;
@@ -170,30 +169,7 @@ int compareTo(const void *first, const void *second){
 
 }
 
-struct _projection* sortProjections(struct _projection* projections, int n_projections){
-
-    struct _projection projection_temp;
-
-    for (int i = 0; i < n_projections; ++i){
-
-        for (int j = i + 1; j < n_projections; ++j){
-
-            if (projections[i].projection[0] > projections[j].projection[0]){
-
-                projection_temp =  projections[i];
-                projections[i] = projections[j];
-                projections[j] = projection_temp;
-
-            }
-
-        }
-
-    }
-
-    return projections;
-}
-
-void left_and_right_partitions(double **points, int n_points, double *center_node, double* right_partition_point, node_t* node) {
+void left_and_right_partitions(struct _projection* projections, int n_points, double center_x, node_t* node) {
 
     //Não sei o tamanho destes vetores logo de início, portanto meti como n_points
     double **left_partition = create_array_pts1(n_dimensions, n_points);
@@ -202,39 +178,31 @@ void left_and_right_partitions(double **points, int n_points, double *center_nod
     int n_left_partition = 0;
     int n_right_partition = 0;
 
-    if (right_partition_point == NULL){
+    /*printf("Projections \n");
+    for(int i = 0; i != n_points; i++){
+            printf("%f ", projections[i].projection[0]);
+
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("Points \n");
+    for(int i = 0; i != n_points; i++){
+            printf("%f ", projections[i].point[0]);
+        printf("\n");
+    }
+    printf("\n");
+*/
         for (int i = 0; i != n_points; i++) {
-            if (points[i][0] < center_node[0]) {
-                left_partition[n_left_partition] = points[i];
+            //printf("Projections[i]: %f", projections[i]);
+            if (projections[i].projection[0] < center_x) {
+                left_partition[n_left_partition] = projections[i].point;
                 n_left_partition++;
             } else {
-                right_partition[n_right_partition] = points[i];
+                right_partition[n_right_partition] = projections[i].point;
                 n_right_partition++;
             }
         }
-    }
-    else {
-        for (int i = 0; i != n_points; i++) {
-            if (points[i][0] < center_node[0] && points[i][0] != right_partition_point[0]) {
-                left_partition[n_left_partition] = points[i];
-                n_left_partition++;
-            }
-            else if (points[i][0] > center_node[0] && points[i][0] != right_partition_point[0]) {
-                right_partition[n_right_partition] = points[i];
-                n_right_partition++;
-            }
-        }
-        right_partition[n_right_partition] = right_partition_point;
-        n_right_partition++;
-    }
-
-    if(n_points == 2 && points[0][0] == points[1][0]){
-        right_partition[0] = points[0];
-        n_right_partition = 1;
-        left_partition[0] = points[0];
-        n_left_partition = 1;
-    }
-
 
     if (n_left_partition > 0 && n_right_partition == 0){
         node->R = -1;
@@ -264,35 +232,28 @@ void left_and_right_partitions(double **points, int n_points, double *center_nod
     }
 }
 
-struct _projection get_center_projection(struct _projection* projections, int n_projections, double* sorted_projections_x){
+struct _projection get_center_projection_even_numb(struct _projection* projections, int n_projections, double* projections_x){
 
     struct _projection center_node;
 
-    if (n_projections % 2 == 0){
-        double center_x_1 = sorted_projections_x[(n_projections / 2) - 1];
-        double center_x_2 = sorted_projections_x[n_projections / 2];
-        double* center_node_1 = malloc(sizeof(double) * n_dimensions);
-        double* center_node_2 = malloc(sizeof(double) * n_dimensions);
-        for (int i = 0; i != n_projections; i++){
-            if (projections[i].projection[0] == center_x_1){
-                center_node_1 = projections[i].projection;
-            }
-            if (projections[i].projection[0] == center_x_2){
-                center_node_2 = projections[i].projection;
-            }
+    double center_x_1 = projections_x[(n_projections / 2) - 1];
+    double center_x_2 = projections_x[n_projections / 2];
+
+    double* center;
+    double* center_1;
+    double* center_2;
+
+    for (int i = 0; i != n_projections; i++){
+        if (projections[i].projection[0] == center_x_1){
+            center_1 = projections[i].projection;
         }
-        center_node.projection = vector_avg(center_node_1, center_node_2);
+        if (projections[i].projection[0] == center_x_2){
+            center_2 = projections[i].projection;
+        }
     }
 
-    else {
-        double center_x = sorted_projections_x[n_projections / 2];
-        for (int i = 0; i != n_projections; i++){
-            if (projections[i].projection[0] == center_x){
-                center_node = projections[i];
-                break;
-            }
-        }
-    }
+    center = vector_avg(center_1, center_2);
+    center_node.projection = center;
 
     return center_node;
 
@@ -315,7 +276,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //Get Projections
         int n_projections = 0;
-        double* projections_x = malloc(sizeof(double) * (n_points - 2));
+        double* projections_x = malloc(sizeof(double) * n_points);
 
         double* a = pts[furthest_nodes[1]];
         double* b = pts[furthest_nodes[0]];
@@ -334,28 +295,33 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
                 n_projections++;
             }
         }
+        projections[n_projections].projection = pts[furthest_nodes[0]];
+        projections[n_projections].point = pts[furthest_nodes[0]];
+        projections[n_projections + 1].projection = pts[furthest_nodes[1]];
+        projections[n_projections + 1].point = pts[furthest_nodes[1]];
+        projections_x[n_projections] = pts[furthest_nodes[0]][0];
+        projections_x[n_projections + 1] = pts[furthest_nodes[1]][0];
+        n_projections = n_points;
 
+        qsort(projections_x, n_points, sizeof(double), compareTo);
 
-        qsort(projections_x, n_points - 2, sizeof(double), compareTo);
-
-        //Get center node
+        double center_x;
         struct _projection center_projection;
 
-        //double* center_node = malloc(sizeof(double) * n_dimensions);
-        if (n_projections == 1){
-            center_projection = projections[0];  //The center node is going to be the only projection
+        if (n_projections % 2 == 0){
+            double center_x_1 = projections_x[(n_points / 2) - 1];
+            double center_x_2 = projections_x[(n_points / 2)];
+            center_x = (center_x_1 + center_x_2) / 2;
+            center_projection = get_center_projection_even_numb(projections, n_points, projections_x);
         }
         else{
-            center_projection = get_center_projection(projections, n_projections, projections_x);
+            center_x = projections_x[n_projections / 2];
+            for (int i = 0; i != n_projections; i++){
+                if (projections[i].projection[0] == center_x){
+                    center_projection = projections[i];
+                }
+            }
         }
-
-        double* point_with_center_projection = NULL;
-
-        if (n_projections % 2 != 0) {
-            point_with_center_projection = center_projection.point;
-        }
-
-
 
         //Give the node the respective values
         node = addNewNode(-1, -1, -1, -1);
@@ -365,7 +331,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         node->coordinates = center_projection.projection;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(pts, n_points, center_projection.projection, point_with_center_projection, node);
+        left_and_right_partitions(projections, n_points, center_x, node);
 
         return node;
 
@@ -374,8 +340,15 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //If there is only two points no projections are necessary, we only need to find the average of these two nodes to get the center node
     else if (n_points == 2){
 
-        double* center_node = malloc (sizeof(double) * n_dims);
+        double* center_node;
         center_node = vector_avg(pts[0], pts[1]);
+        double center_x = center_node[0];
+
+        struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
+        projections[0].projection = pts[0];
+        projections[0].point = pts[0];
+        projections[1].projection = pts[1];
+        projections[1].point = pts[1];
 
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
@@ -384,7 +357,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         node->coordinates = center_node;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(pts, n_points, center_node, NULL, node);
+        left_and_right_partitions(projections, n_points, center_x, node);
 
         return node;
     }

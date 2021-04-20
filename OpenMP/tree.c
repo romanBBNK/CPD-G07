@@ -137,11 +137,11 @@ double* get_furthest_nodes(double **pts, int n_points){
     int i;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
-#pragma parallel for private(i, dist_temp)
+//#pragma omp parallel for private(i, dist_temp)
     for (int i = 0; i != n_points; i++){
         dist_temp = distance(initial_point, pts[i]);
         if (dist_temp > dist) {
-#pragma critical
+//#pragma omp critical
             {
                 if (dist_temp > dist) {
                     dist = dist_temp;
@@ -227,13 +227,17 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
     else {
         int i;
         if (id == 0) {
-//#pragma omp parallel for private(i, id) num_threads(2)
-            for (i = 0; i < 2; i++) {
-                if (i == 0) {
-                    printf("Level  number of threads in the team - %d\n" , omp_get_num_threads());
+#pragma omp parallel sections
+            {
+#pragma omp section
+                {
+                    printf("%d\n", omp_get_thread_num());
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                     node->L = (node->AddL)->id;
-                } else {
+                }
+#pragma omp section
+                {
+                    printf("%d\n", omp_get_thread_num());
                     node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                     node->R = (node->AddR)->id;
                 }

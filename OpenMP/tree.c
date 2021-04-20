@@ -230,6 +230,7 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 #pragma omp parallel for private(i)
                 for (i = 0; i < 2; i++) {
                     if (i == 0) {
+                        printf("Level  number of threads in the team - %d\n" , omp_get_num_threads());
                         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                         node->L = (node->AddL)->id;
                     } else {

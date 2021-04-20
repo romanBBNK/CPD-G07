@@ -4,7 +4,7 @@
 
 
 int n_dimensions;
-int id = 0;
+int id = -1;
 
 double distance(double *pt1, double *pt2)
 {
@@ -226,8 +226,8 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
     }
     else {
         int i;
-        if (id == 1) {
-#pragma omp parallel for private(i)
+        if (id == 0) {
+#pragma omp parallel for private(i, id) num_threads(2)
                 for (i = 0; i < 2; i++) {
                     if (i == 0) {
                         printf("Level  number of threads in the team - %d\n" , omp_get_num_threads());
@@ -282,6 +282,8 @@ struct _projection get_center_projection_even_numb(struct _projection* projectio
 node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
     n_dimensions = n_dims;
+#pragma omp atomic
+        id++;
 
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
@@ -346,7 +348,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //Give the node the respective values
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
-        id++;
         node->radius = new_max(distance(pts[furthest_nodes[0]], center_projection.projection), distance(pts[furthest_nodes[1]], center_projection.projection));
         node->coordinates = center_projection.projection;
 
@@ -372,7 +373,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
-        id++;
         node->radius = distance(pts[0], center_node);
         node->coordinates = center_node;
 
@@ -389,7 +389,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
-        id++;
         node->coordinates = pts[0];
         node->L = -1;
         node->R = -1;

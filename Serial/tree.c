@@ -66,6 +66,7 @@ double* addition(double* pt1, double* pt2){
     for (int i = 0; i != n_dimensions; i++){
         pt3[i] = pt1[i] + pt2[i];
     }
+    free(pt1);
 
     return pt3;
 
@@ -90,10 +91,11 @@ double* orthogonal_projection(double* a, double* b, double* p, double* b_minus_a
     double* p_minus_a = subtraction(p, a);
 
     double first_term = inner_product(p_minus_a, b_minus_a) / inner_product_a_minus_b;
+    free(p_minus_a);
 
     pt3 = addition(multiply_by_scalar(b_minus_a, first_term), a);
 
-    if (pt3[0] < a[0] && pt3[0] < b[0]){
+    if (pt3[0] < a[0] && pt3[0] < b[0]){ //TODO: Clean these if statements
     }
 
     if (pt3[0] > a[0] && pt3[0] > b[0]){
@@ -230,6 +232,13 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
             }
         }
     }
+    //TODO: Not 100% sure if freeing these arrays doesn't break stuff
+    for(long i = 0; i<n_points; i++)
+        free(left_partition[i]);
+    for(long j = 0; j<n_points; j++)
+        free(right_partition[j]);
+    free(right_partition);
+    free(left_partition);
 }
 
 struct _projection get_center_projection_even_numb(struct _projection* projections, int n_projections, double* projections_x){
@@ -277,7 +286,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //Get Projections
         int n_projections = 0;
         double* projections_x = malloc(sizeof(double) * n_points);
-
         double* a = pts[furthest_nodes[1]];
         double* b = pts[furthest_nodes[0]];
 
@@ -318,7 +326,10 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
             center_x = projections_x[n_projections / 2];
             for (int i = 0; i != n_projections; i++){
                 if (projections[i].projection[0] == center_x){
-                    center_projection = projections[i];
+                    //This creates a unique projection array to be used in the node and will be freed
+                    //together with the node. This is so that we can free the huge projections arrays
+                    //and be left with only the one small array we actually need.
+                    center_projection.projection = vector_avg(projections[i].projection, projections[i].projection);
                 }
             }
         }
@@ -332,6 +343,13 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //Get Left and Right Partitions and do this function recursively
         left_and_right_partitions(projections, n_points, center_x, node);
+
+        //Freeing of intermediate variables
+        free(furthest_nodes);
+        free(projections); //TODO Not sure if I should clean each projection in a for or not. I think not
+        free(projections_x);
+        free(b_minus_a);
+        free(orthogonal_proj);
 
         return node;
 
@@ -359,6 +377,9 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //Get Left and Right Partitions and do this function recursively
         left_and_right_partitions(projections, n_points, center_x, node);
 
+        //Free temporary variables that won't be used in the other functions
+        free(projections);
+
         return node;
     }
 
@@ -370,12 +391,35 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->coordinates = pts[0];
+        node->coordinates = vector_avg(pts[0], pts[0]);
         node->L = -1;
         node->R = -1;
         node->radius = 0;
 
         return node;
     }
+    return 0;
+}
+
+int cleanMemory(double **pts, node_t* root, long np){
+    //Cleans the points array
+    for(long i = 0; i < np; i++)
+        free(pts[i]);
+    free(pts);
+
+    //Cleans the tree
+    recursiveClean(root);
+    return 0;
+}
+
+int recursiveClean(node_t* root){
+    if(root->AddR != NULL){
+        recursiveClean(root->AddR);
+    }
+    if(root->AddL != NULL){
+        recursiveClean(root->AddL);
+    }
+    free(root->coordinates);
+    free(root);
     return 0;
 }

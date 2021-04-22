@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
    // dump_tree(root, n_dims);
     printf("Acabei\n");
     fprintf(stderr, "%.1lf\n", exec_time);
+    cleanMemory(pts, root, n_points);
     return 0;
 }
 

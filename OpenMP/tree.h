@@ -20,6 +20,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node);
 
 node_t* addNewNode(double radius, long id, long L, long R);
 
-
+int cleanMemory(double **pts, node_t* root, long np);
+int recursiveClean(node_t* root);
 
 #endif //CPD_G07_TREE_H

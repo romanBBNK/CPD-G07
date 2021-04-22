@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     exec_time += omp_get_wtime();
     dump_tree(root, n_dims);
     fprintf(stderr, "%.1lf\n", exec_time);
+    cleanMemory(pts, root, n_points);
     return 0;
 }
 

@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 {
 
     omp_set_dynamic(0);
-    omp_set_num_threads(2);
+    omp_set_num_threads(4);
 
     double exec_time;
     exec_time = -omp_get_wtime();
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     root = build_tree(pts, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
-    dump_tree(root, n_dims);
+   // dump_tree(root, n_dims);
     printf("Acabei\n");
     fprintf(stderr, "%.1lf\n", exec_time);
     return 0;

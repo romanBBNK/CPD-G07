@@ -5,6 +5,7 @@
 
 int n_dimensions;
 int id = -1;
+int active_threads=0;
 
 double distance(double *pt1, double *pt2)
 {
@@ -211,50 +212,89 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
         }
     }
 
-    if (n_left_partition > 0 && n_right_partition == 0){
+    if (n_left_partition > 0 && n_right_partition == 0) {
         node->R = -1;
         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
         node->L = (node->AddL)->id;
         return;
-    }
-
-    else if (n_left_partition == 0 && n_right_partition > 0){
+    } else if (n_left_partition == 0 && n_right_partition > 0) {
         node->L = -1;
         node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
         node->R = (node->AddR)->id;
         return;
-    }
-    else {
+    } else {
         int i;
         if (id == 0) {
 #pragma omp parallel sections
             {
+
 #pragma omp section
                 {
-                    printf("%d\n", omp_get_thread_num());
+
+                    //printf("Thread %d começou\n", omp_get_thread_num());
+
+#pragma omp atomic
+                    active_threads++;
+
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                     node->L = (node->AddL)->id;
+
+                    //printf("Thread %d acabou\n", omp_get_thread_num());
+#pragma omp atomic
+                    active_threads--;
                 }
+
+
 #pragma omp section
                 {
-                    printf("%d\n", omp_get_thread_num());
+
+                    //printf("Thread %d começou\n", omp_get_thread_num());
+
+#pragma omp atomic
+                    active_threads++;
+
                     node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                     node->R = (node->AddR)->id;
+
+                    //printf("Thread %d acabou\n", omp_get_thread_num());
+#pragma omp atomic
+                    active_threads--;
                 }
             }
+        } else if (active_threads < omp_get_max_threads()) {
+
+#pragma omp task
+            {
+
+                //printf("Thread %d começou\n", omp_get_thread_num());
+
+#pragma omp atomic
+                active_threads++;
+
+                node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+                node->R = (node->AddR)->id;
+
+                //printf("Thread %d acabou\n", omp_get_thread_num());
+
+#pragma omp atomic
+                active_threads--;
+            }
+
+            node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+            node->L = (node->AddL)->id;
         } else {
-            for (i = 0; i < 2; i++) {
-                if (i == 0) {
-                    node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
-                    node->L = (node->AddL)->id;
-                } else {
-                    node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
-                    node->R = (node->AddR)->id;
-                }
-            }
+
+            node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+            node->L = (node->AddL)->id;
+            node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+            node->R = (node->AddR)->id;
+            //        }
+            //  }
         }
     }
 }
+
+
 
 struct _projection get_center_projection_even_numb(struct _projection* projections, int n_projections, double* projections_x){
 

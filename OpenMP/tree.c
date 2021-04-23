@@ -215,11 +215,15 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
         node->R = -1;
         node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
         node->L = (node->AddL)->id;
+        free(left_partition);
+        free(right_partition);
         return;
     } else if (n_left_partition == 0 && n_right_partition > 0) {
         node->L = -1;
         node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
         node->R = (node->AddR)->id;
+        free(left_partition);
+        free(right_partition);
         return;
     } else {
         int i;
@@ -235,6 +239,7 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                     node->L = (node->AddL)->id;
+                    free(left_partition);
 
 #pragma omp atomic
                     active_threads--;
@@ -249,6 +254,7 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 
                     node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                     node->R = (node->AddR)->id;
+                    free(right_partition);
 
 #pragma omp atomic
                     active_threads--;
@@ -264,6 +270,7 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 
                 node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                 node->R = (node->AddR)->id;
+                free(right_partition);
 
 #pragma omp atomic
                 active_threads--;
@@ -271,18 +278,19 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 
             node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
             node->L = (node->AddL)->id;
+            free(left_partition);
         } else {
 
             node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
             node->L = (node->AddL)->id;
+            free(left_partition);
             node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
             node->R = (node->AddR)->id;
+            free(right_partition);
         }
     }
-    //free(left_partition[0]);
-    free(left_partition);
-    //free(right_partition[0]);
-    //free(right_partition); //TODO: SEGFAULT issue here
+    //free(left_partition);
+    //free(right_partition);
 }
 
 
@@ -382,7 +390,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
                     //This creates a unique projection array to be used in the node and will be freed
                     //together with the node. This is so that we can free the huge projections arrays
                     //and be left with only the one small array we actually need.
-                    center_projection.projection = vector_avg(projections[i].projection, projections[i].projection);
+                    center_projection.projection = vector_copy(projections[i].projection);
                 }
             }
         }
@@ -395,11 +403,11 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         left_and_right_partitions(projections, n_points, center_x, node);
 
         //Freeing of intermediate variables
-        //free(furthest_nodes);
-        //free(projections); //TODO Not sure if I should clean each projection in a for or not. I think not
-        //free(projections_x);
-        //free(b_minus_a);
-        //free(orthogonal_proj);
+        free(furthest_nodes);
+        free(projections); //TODO Not sure if I should clean each projection in a for or not. I think not
+        free(projections_x);
+        free(b_minus_a);
+        free(orthogonal_proj);
 
         return node;
 
@@ -425,7 +433,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         left_and_right_partitions(projections, n_points, center_x, node);
 
         //Free temporary variables that won't be used in the other functions
-        //free(projections);
+        free(projections);
 
         return node;
     }

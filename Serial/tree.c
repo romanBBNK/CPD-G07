@@ -99,12 +99,6 @@ double* orthogonal_projection(double* a, double* b, double* p, double* b_minus_a
 
     pt3 = addition(multiply_by_scalar(b_minus_a, first_term), a);
 
-    if (pt3[0] < a[0] && pt3[0] < b[0]){ //TODO: Clean these if statements
-    }
-
-    if (pt3[0] > a[0] && pt3[0] > b[0]){
-    }
-
     return pt3;
 
 }
@@ -129,6 +123,17 @@ double* vector_avg(double* p1, double* p2){
 
     for (int i = 0; i != n_dimensions; i++){
         p3[i] = (p1[i] + p2[i]) / 2;
+    }
+    return p3;
+
+}
+
+double* vector_copy(double* p1){
+
+    double* p3 = malloc(sizeof(double) * n_dimensions);
+
+    for (int i = 0; i != n_dimensions; i++){
+        p3[i] = p1[i];
     }
     return p3;
 
@@ -219,11 +224,6 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
             }
         }
     }
-    //TODO: Not 100% sure if freeing these arrays doesn't break stuff
-    for(long i = 0; i<n_points; i++)
-        free(left_partition[i]);
-    for(long j = 0; j<n_points; j++)
-        free(right_partition[j]);
     free(right_partition);
     free(left_partition);
 }
@@ -316,7 +316,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
                     //This creates a unique projection array to be used in the node and will be freed
                     //together with the node. This is so that we can free the huge projections arrays
                     //and be left with only the one small array we actually need.
-                    center_projection.projection = vector_avg(projections[i].projection, projections[i].projection);
+                    center_projection.projection = vector_copy(projections[i].projection);
                 }
             }
         }
@@ -388,8 +388,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
 int cleanMemory(double **pts, node_t* root, long np){
     //Cleans the points array
-    for(long i = 0; i < np; i++)
-        free(pts[i]);
     free(pts);
 
     //Cleans the tree

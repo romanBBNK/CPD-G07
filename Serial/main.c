@@ -30,12 +30,11 @@ int main(int argc, char *argv[])
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
 
-    //printf("N_Dims: %d ", n_dims);
-    //printf("N_Points: %d\n", n_points);
     node_t* root;
     root = build_tree(pts, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
+    printf("%d %d\n", n_dims, getID());
     dump_tree(root, n_dims);
     fprintf(stderr, "%.1lf\n", exec_time);
     cleanMemory(pts, root, n_points);

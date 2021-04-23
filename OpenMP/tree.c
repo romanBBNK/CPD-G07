@@ -18,6 +18,10 @@ double distance(double *pt1, double *pt2)
     return sqrt(dist);
 }
 
+int getID(){
+    return id;
+}
+
 double **create_array_pts1(int n_dims, long np)
 {
     double *_p_arr;
@@ -150,18 +154,16 @@ double* get_furthest_nodes(double **pts, int n_points){
     int i;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
-//#pragma omp parallel for private(i, dist_temp)
     for (int i = 0; i != n_points; i++){
         dist_temp = distance(initial_point, pts[i]);
         if (dist_temp > dist) {
-//#pragma omp critical
-            {
+
                 if (dist_temp > dist) {
                     dist = dist_temp;
                     furthest_nodes[0] = i;
                     a = pts[i];
                 }
-            }
+
         }
     }
 
@@ -198,23 +200,7 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
     int n_left_partition = 0;
     int n_right_partition = 0;
 
-    /*printf("Projections \n");
-    for(int i = 0; i != n_points; i++){
-            printf("%f ", projections[i].projection[0]);
-
-        printf("\n");
-    }
-    printf("\n");
-
-    printf("Points \n");
-    for(int i = 0; i != n_points; i++){
-            printf("%f ", projections[i].point[0]);
-        printf("\n");
-    }
-    printf("\n");
-*/
     for (int i = 0; i != n_points; i++) {
-        //printf("Projections[i]: %f", projections[i]);
         if (projections[i].projection[0] < center_x) {
             left_partition[n_left_partition] = projections[i].point;
             n_left_partition++;
@@ -244,15 +230,12 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 #pragma omp section
                 {
 
-                    //printf("Thread %d começou\n", omp_get_thread_num());
-
 #pragma omp atomic
                     active_threads++;
 
                     node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
                     node->L = (node->AddL)->id;
 
-                    //printf("Thread %d acabou\n", omp_get_thread_num());
 #pragma omp atomic
                     active_threads--;
                 }
@@ -261,15 +244,12 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 #pragma omp section
                 {
 
-                    //printf("Thread %d começou\n", omp_get_thread_num());
-
 #pragma omp atomic
                     active_threads++;
 
                     node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                     node->R = (node->AddR)->id;
 
-                    //printf("Thread %d acabou\n", omp_get_thread_num());
 #pragma omp atomic
                     active_threads--;
                 }
@@ -279,15 +259,11 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 #pragma omp task
             {
 
-                //printf("Thread %d começou\n", omp_get_thread_num());
-
 #pragma omp atomic
                 active_threads++;
 
                 node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
                 node->R = (node->AddR)->id;
-
-                //printf("Thread %d acabou\n", omp_get_thread_num());
 
 #pragma omp atomic
                 active_threads--;
@@ -301,8 +277,6 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
             node->L = (node->AddL)->id;
             node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
             node->R = (node->AddR)->id;
-            //        }
-            //  }
         }
     }
     //free(left_partition[0]);
@@ -343,8 +317,12 @@ struct _projection get_center_projection_even_numb(struct _projection* projectio
 node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
     n_dimensions = n_dims;
-#pragma omp atomic
-    id++;
+#pragma omp critical
+    {
+        id++;
+        node = addNewNode(-1, -1, -1, -1);
+        node->id = id;
+    }
 
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
@@ -410,8 +388,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         }
 
         //Give the node the respective values
-        node = addNewNode(-1, -1, -1, -1);
-        node->id = id;
         node->radius = new_max(distance(pts[furthest_nodes[0]], center_projection.projection), distance(pts[furthest_nodes[1]], center_projection.projection));
         node->coordinates = center_projection.projection;
 
@@ -442,8 +418,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         projections[1].projection = pts[1];
         projections[1].point = pts[1];
 
-        node = addNewNode(-1, -1, -1, -1);
-        node->id = id;
         node->radius = distance(pts[0], center_node);
         node->coordinates = center_node;
 
@@ -459,10 +433,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         //if there is only one point we just need to give the values to this node and stop the recursivity
     else if (n_points == 1){
 
-        //printf("Only one: %f %f\n", pts[0][0], pts[0][1]);
-
-        node = addNewNode(-1, -1, -1, -1);
-        node->id = id;
         node->coordinates = vector_copy(pts[0]);
         node->L = -1;
         node->R = -1;

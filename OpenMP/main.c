@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 {
 
     omp_set_dynamic(0);
-    omp_set_num_threads(4);
+    //omp_set_num_threads(4);
 
     double exec_time;
     exec_time = -omp_get_wtime();
@@ -36,14 +36,12 @@ int main(int argc, char *argv[])
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
 
-    //printf("N_Dims: %d ", n_dims);
-    //printf("N_Points: %d\n", n_points);
     node_t* root;
     root = build_tree(pts, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
-   // dump_tree(root, n_dims);
-    printf("Acabei\n");
+    printf("%d %d\n", n_dims, getID() + 1);
+    dump_tree(root, n_dims);
     fprintf(stderr, "%.1lf\n", exec_time);
     cleanMemory(pts, root, n_points);
     return 0;

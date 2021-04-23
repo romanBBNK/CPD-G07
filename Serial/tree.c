@@ -17,6 +17,10 @@ double distance(double *pt1, double *pt2)
     return sqrt(dist);
 }
 
+int getID(){
+    return id;
+}
+
 double **create_array_pts1(int n_dims, long np)
 {
     double *_p_arr;
@@ -173,30 +177,13 @@ int compareTo(const void *first, const void *second){
 
 void left_and_right_partitions(struct _projection* projections, int n_points, double center_x, node_t* node) {
 
-    //Não sei o tamanho destes vetores logo de início, portanto meti como n_points
     double **left_partition = create_array_pts1(n_dimensions, n_points);
     double **right_partition = create_array_pts1(n_dimensions, n_points);
 
     int n_left_partition = 0;
     int n_right_partition = 0;
 
-    /*printf("Projections \n");
-    for(int i = 0; i != n_points; i++){
-            printf("%f ", projections[i].projection[0]);
-
-        printf("\n");
-    }
-    printf("\n");
-
-    printf("Points \n");
-    for(int i = 0; i != n_points; i++){
-            printf("%f ", projections[i].point[0]);
-        printf("\n");
-    }
-    printf("\n");
-*/
         for (int i = 0; i != n_points; i++) {
-            //printf("Projections[i]: %f", projections[i]);
             if (projections[i].projection[0] < center_x) {
                 left_partition[n_left_partition] = projections[i].point;
                 n_left_partition++;
@@ -385,8 +372,6 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //if there is only one point we just need to give the values to this node and stop the recursivity
     else if (n_points == 1){
-
-        //printf("Only one: %f %f\n", pts[0][0], pts[0][1]);
 
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;

@@ -4,7 +4,7 @@ OBJS = $(SOURCES:%.c=%.o)
 CC   = gcc
 CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O3 #-I../
 LDFLAGS=-lm
-TARGET = ballAlg
+TARGET = ballAlg-mpi
 
 all: $(TARGET)
 

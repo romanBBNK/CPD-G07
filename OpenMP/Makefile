@@ -21,3 +21,6 @@ $(OBJS):
 clean:
 	@echo Cleaning...
 	rm -f $(OBJS) $(TARGET)
+
+move:
+	mv $(TARGET) ../

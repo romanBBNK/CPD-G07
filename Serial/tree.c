@@ -182,21 +182,33 @@ int compareTo(const void *first, const void *second){
 
 void left_and_right_partitions(struct _projection* projections, int n_points, double center_x, node_t* node) {
 
-    double **left_partition = create_array_pts1(n_dimensions, n_points);
-    double **right_partition = create_array_pts1(n_dimensions, n_points);
-
     int n_left_partition = 0;
     int n_right_partition = 0;
+    int i;
 
-        for (int i = 0; i != n_points; i++) {
-            if (projections[i].projection[0] < center_x) {
-                left_partition[n_left_partition] = projections[i].point;
-                n_left_partition++;
-            } else {
-                right_partition[n_right_partition] = projections[i].point;
-                n_right_partition++;
-            }
+    for(i = 0; i != n_points; i++){
+        if (projections[i].projection[0] < center_x) {
+            n_left_partition++;
+        } else {
+            n_right_partition++;
         }
+    }
+
+    double* *left_partition = malloc(sizeof(double*) * n_left_partition);
+    double* *right_partition = malloc(sizeof(double*) * n_right_partition);
+
+    n_left_partition = 0;
+    n_right_partition = 0;
+
+    for(i = 0; i != n_points; i++){
+        if (projections[i].projection[0] < center_x) {
+            left_partition[n_left_partition] = projections[i].point;
+            n_left_partition++;
+        } else {
+            right_partition[n_right_partition] = projections[i].point;
+            n_right_partition++;
+        }
+    }
 
     if (n_left_partition > 0 && n_right_partition == 0){
         node->R = -1;
@@ -333,7 +345,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //Freeing of intermediate variables
         free(furthest_nodes);
-        free(projections); //TODO Not sure if I should clean each projection in a for or not. I think not
+        free(projections);
         free(projections_x);
         free(b_minus_a);
         free(orthogonal_proj);

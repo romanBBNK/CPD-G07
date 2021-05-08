@@ -1,7 +1,7 @@
 SOURCES = main.c tree.c
 SOURCES+=
 OBJS = $(SOURCES:%.c=%.o)
-CC   = gcc
+CC   = mpicc
 CFLAGS =-Wall -g -w -std=gnu99 -fopenmp -O3 #-I../
 LDFLAGS=-lm
 TARGET = ballAlg-mpi

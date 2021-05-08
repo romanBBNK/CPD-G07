@@ -334,7 +334,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
 
         //Freeing of intermediate variables
         free(furthest_nodes);
-        free(projections); //TODO Not sure if I should clean each projection in a for or not. I think not
+        free(projections);
         free(projections_x);
         free(b_minus_a);
         free(orthogonal_proj);

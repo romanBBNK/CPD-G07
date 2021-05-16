@@ -14,9 +14,10 @@ typedef struct _node {
 typedef struct _projection {
     double* projection;
     double* point;
+    int indice;
 };
 
-node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node);
+node_t* build_tree(double **pts, int* partition_indices, int n_dims, long n_points, node_t* node);
 
 node_t* addNewNode(double radius, long id, long L, long R);
 

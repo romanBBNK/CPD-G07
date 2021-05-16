@@ -6,6 +6,8 @@
 int n_dimensions;
 int id = 0;
 
+int eliminar = 0;
+
 double distance(double *pt1, double *pt2)
 {
     double dist = 0.0;
@@ -139,30 +141,31 @@ double* vector_copy(double* p1){
 
 }
 
-double* get_furthest_nodes(double **pts, int n_points){
+double* get_furthest_nodes(double **pts, int n_points, int* partition_indices){
 
     double dist = 0;
     double dist_temp;
-    double* initial_point = pts[0];
+    double* initial_point = pts[partition_indices[0]];
     double* a;
     int *furthest_nodes = malloc(sizeof(int) * 2);
 
     for (int i = 0; i != n_points; i++){
-        dist_temp = distance(initial_point, pts[i]);
+
+        dist_temp = distance(initial_point, pts[partition_indices[i]]);
         if (dist_temp > dist) {
             dist = dist_temp;
-            furthest_nodes[0] = i;
-            a = pts[i];
+            furthest_nodes[0] = partition_indices[i];
+            a = pts[partition_indices[i]];
         }
     }
 
     dist = 0;
 
     for (int i = 0; i != n_points; i++){
-        dist_temp = distance(a, pts[i]);
+        dist_temp = distance(a, pts[partition_indices[i]]);
         if (dist_temp > dist) {
             dist = dist_temp;
-            furthest_nodes[1] = i;
+            furthest_nodes[1] = partition_indices[i];
         }
     }
 
@@ -180,7 +183,7 @@ int compareTo(const void *first, const void *second){
 
 }
 
-void left_and_right_partitions(struct _projection* projections, int n_points, double center_x, node_t* node) {
+void left_and_right_partitions(double **pts, struct _projection* projections, int n_points, double center_x, node_t* node) {
 
     int n_left_partition = 0;
     int n_right_partition = 0;
@@ -194,32 +197,32 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
         }
     }
 
-    double* *left_partition = malloc(sizeof(double*) * n_left_partition);
-    double* *right_partition = malloc(sizeof(double*) * n_right_partition);
+    int *left_partition_indices = malloc(sizeof(int) * n_left_partition);
+    int *right_partition_indices = malloc(sizeof(int) * n_right_partition);
 
     n_left_partition = 0;
     n_right_partition = 0;
 
     for(i = 0; i != n_points; i++){
         if (projections[i].projection[0] < center_x) {
-            left_partition[n_left_partition] = projections[i].point;
+            left_partition_indices[n_left_partition] = projections[i].indice;
             n_left_partition++;
         } else {
-            right_partition[n_right_partition] = projections[i].point;
+            right_partition_indices[n_right_partition] = projections[i].indice;
             n_right_partition++;
         }
     }
 
     if (n_left_partition > 0 && n_right_partition == 0){
         node->R = -1;
-        node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+        node->AddL = build_tree(pts, left_partition_indices, n_dimensions, n_left_partition, node->AddL);
         node->L = (node->AddL)->id;
         return;
     }
 
     else if (n_left_partition == 0 && n_right_partition > 0){
         node->L = -1;
-        node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+        node->AddR = build_tree(pts, right_partition_indices, n_dimensions, n_right_partition, node->AddR);
         node->R = (node->AddR)->id;
         return;
     }
@@ -228,16 +231,16 @@ void left_and_right_partitions(struct _projection* projections, int n_points, do
 
         for (i = 0; i < 2; i++) {
             if (i == 0) {
-                node->AddL = build_tree(left_partition, n_dimensions, n_left_partition, node->AddL);
+                node->AddL = build_tree(pts, left_partition_indices, n_dimensions, n_left_partition, node->AddL);
                 node->L = (node->AddL)->id;
             } else {
-                node->AddR = build_tree(right_partition, n_dimensions, n_right_partition, node->AddR);
+                node->AddR = build_tree(pts, right_partition_indices, n_dimensions, n_right_partition, node->AddR);
                 node->R = (node->AddR)->id;
             }
         }
     }
-    free(right_partition);
-    free(left_partition);
+    free(right_partition_indices);
+    free(left_partition_indices);
 }
 
 struct _projection get_center_projection_even_numb(struct _projection* projections, int n_projections, double* projections_x){
@@ -267,17 +270,31 @@ struct _projection get_center_projection_even_numb(struct _projection* projectio
 
 }
 
-node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
+double get_radius(double **pts, int* partition_indices, int n_points, double* center_projection){
+
+    double max_distance = 0;
+    double max_distance_temp;
+
+    for (int i = 0; i != n_points; i++){
+        max_distance_temp = distance(pts[partition_indices[i]], center_projection);
+        if (max_distance_temp > max_distance){
+            max_distance = max_distance_temp;        }
+    }
+
+    return max_distance;
+
+}
+
+node_t* build_tree(double **pts, int* partition_indices, int n_dims, long n_points, node_t* node){
 
     n_dimensions = n_dims;
 
     //if the number of points is larger than 2 we will use the normal algorithm
     if (n_points > 2){
 
-
         //Obtain furthest nodes within the given points
         int *furthest_nodes;
-        furthest_nodes = get_furthest_nodes(pts, n_points);
+        furthest_nodes = get_furthest_nodes(pts, n_points, partition_indices);
 
         //Get the projections of the rest of the points
         struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
@@ -292,20 +309,25 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         double inner_product_a_minus_b = inner_product(b_minus_a, b_minus_a);
         double* orthogonal_proj;
 
-        for(int i = 0; i < n_points; i++) {
-            if (i != furthest_nodes[0] && i != furthest_nodes[1]){
 
-                orthogonal_proj = orthogonal_projection(pts[furthest_nodes[0]], pts[furthest_nodes[1]], pts[i], b_minus_a, inner_product_a_minus_b);
+        for(int i = 0; i < n_points; i++) {
+            if (partition_indices[i] != furthest_nodes[0] && partition_indices[i] != furthest_nodes[1]){
+
+                orthogonal_proj = orthogonal_projection(pts[furthest_nodes[0]], pts[furthest_nodes[1]], pts[partition_indices[i]], b_minus_a, inner_product_a_minus_b);
                 projections_x[n_projections] = orthogonal_proj[0];
                 projections[n_projections].projection = orthogonal_proj;
-                projections[n_projections].point = pts[i];
+                projections[n_projections].point = pts[partition_indices[i]];
+                projections[n_projections].indice = partition_indices[i];
                 n_projections++;
             }
         }
+
         projections[n_projections].projection = pts[furthest_nodes[0]];
         projections[n_projections].point = pts[furthest_nodes[0]];
+        projections[n_projections].indice = furthest_nodes[0];
         projections[n_projections + 1].projection = pts[furthest_nodes[1]];
         projections[n_projections + 1].point = pts[furthest_nodes[1]];
+        projections[n_projections + 1].indice = furthest_nodes[1];
         projections_x[n_projections] = pts[furthest_nodes[0]][0];
         projections_x[n_projections + 1] = pts[furthest_nodes[1]][0];
         n_projections = n_points;
@@ -337,11 +359,11 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->radius = new_max(distance(pts[furthest_nodes[0]], center_projection.projection), distance(pts[furthest_nodes[1]], center_projection.projection));
+        node->radius = get_radius(pts, partition_indices, n_points, center_projection.projection);
         node->coordinates = center_projection.projection;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(projections, n_points, center_x, node);
+        left_and_right_partitions(pts, projections, n_points, center_x, node);
 
         //Freeing of intermediate variables
         free(furthest_nodes);
@@ -358,23 +380,25 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
     else if (n_points == 2){
 
         double* center_node;
-        center_node = vector_avg(pts[0], pts[1]);
+        center_node = vector_avg(pts[partition_indices[0]], pts[partition_indices[1]]);
         double center_x = center_node[0];
 
         struct _projection* projections = malloc(sizeof(struct _projection) * n_points);
-        projections[0].projection = pts[0];
-        projections[0].point = pts[0];
-        projections[1].projection = pts[1];
-        projections[1].point = pts[1];
+        projections[0].projection = pts[partition_indices[0]];
+        projections[0].point = pts[partition_indices[0]];
+        projections[0].indice = partition_indices[0];
+        projections[1].projection = pts[partition_indices[1]];
+        projections[1].point = pts[partition_indices[1]];
+        projections[1].indice = partition_indices[1];
 
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->radius = distance(pts[0], center_node);
+        node->radius = distance(pts[partition_indices[0]], center_node);
         node->coordinates = center_node;
 
         //Get Left and Right Partitions and do this function recursively
-        left_and_right_partitions(projections, n_points, center_x, node);
+        left_and_right_partitions(pts, projections, n_points, center_x, node);
 
         //Free temporary variables that won't be used in the other functions
         free(projections);
@@ -388,7 +412,7 @@ node_t* build_tree(double **pts, int n_dims, long n_points, node_t* node){
         node = addNewNode(-1, -1, -1, -1);
         node->id = id;
         id++;
-        node->coordinates = vector_avg(pts[0], pts[0]);
+        node->coordinates = vector_avg(pts[partition_indices[0]], pts[partition_indices[0]]);
         node->L = -1;
         node->R = -1;
         node->radius = 0;

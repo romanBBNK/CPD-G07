@@ -30,8 +30,13 @@ int main(int argc, char *argv[])
 
     double **pts = get_points(argc, argv, &n_dims, &n_points);
 
+    int* partition_indices = (int*) malloc(sizeof(int) * n_points);
+    for (int i = 0; i != n_points; i++){
+        partition_indices[i] = i;
+    }
+
     node_t* root;
-    root = build_tree(pts, n_dims, n_points, root);
+    root = build_tree(pts, partition_indices, n_dims, n_points, root);
 
     exec_time += omp_get_wtime();
     printf("%d %d\n", n_dims, getID());
